@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Assistant Chat</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="stylesheet" href="/_gdrfa.css">
+  <style>
+    html,body{height:100%;background:transparent;margin:0}
+    .root{height:100%;display:flex;flex-direction:column;background:#0e0f14;color:var(--text)}
+    .chat{flex:1 1 auto;overflow:auto;padding:12px}
+    .msg{margin:10px 0;max-width:80%}
+    .me{margin-left:auto;text-align:right}
+    .tag{font-size:11px;color:var(--muted);margin-bottom:3px}
+    .bubble{display:inline-block;background:#171a22;border:1px solid #262836;border-radius:12px;padding:10px 12px}
+    .me .bubble{background:#1a2a3a;border-color:#2a3f5a}
+
+    .tips{display:flex;gap:8px;flex-wrap:wrap;padding:0 12px 10px}
+    .tips button{font-weight:600;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:6px 8px;cursor:pointer}
+    .tips button:hover{background:#15161c}
+
+    .input{display:grid;grid-template-columns:1fr auto;gap:8px;padding:10px;border-top:1px solid var(--border)}
+    input[type="text"]{width:100%;padding:10px 12px;border-radius:12px;background:#0f0f12;color:var(--text);border:1px solid var(--border)}
+    .btn{border:0;border-radius:12px;padding:10px 16px;font-weight:800;cursor:pointer}
+    .send{background:linear-gradient(180deg,var(--accent2),var(--accent));color:#fff}
+  </style>
+</head>
+<body>
+  <div class="root">
+    <div class="chat" id="chat">
+      <div class="msg">
+        <div class="tag">Assistant</div>
+        <div class="bubble">
+          <strong>Hi! I can help with alerts or general questions.</strong><br>
+          Try: <em>How many alerts today?</em>, <em>Show last 5 alerts for immigration-queue</em>, or <em>Procedure for tempered-passport</em>.
+        </div>
+      </div>
+    </div>
+
+    <div class="tips">
+      <button data-q="How many alerts today?">How many alerts today?</button>
+      <button data-q="Show last 5 alerts for immigration-queue">Last 5 — Queue</button>
+      <button data-q="Show last 5 alerts for tempered-id">Last 5 — ID</button>
+      <button data-q="Show last 5 alerts for tempered-passport">Last 5 — Passport</button>
+    </div>
+
+    <div class="input">
+      <input id="inp" type="text" placeholder="Ask anything… (Enter to send)">
+      <button class="btn send" id="send">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const chat = document.getElementById("chat");
+    const inp  = document.getElementById("inp");
+    const send = document.getElementById("send");
+
+    const history = [
+      { role:"assistant", content:"Hi! I can help with alerts or general questions." }
+    ];
+
+    function md(s){
+      return String(s)
+        .replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")
+        .replace(/\*(.+?)\*/g,"<em>$1</em>")
+        .replace(/^- (.+)$/gm,"<div>• $1</div>")
+        .replace(/`([^`]+)`/g,"<code>$1</code>")
+        .replace(/\n/g,"<br>");
+    }
+    function addMsg(role,text){
+      const el=document.createElement("div");
+      el.className="msg"+(role==="user"?" me":"");
+      el.innerHTML=`<div class="tag">${role==="user"?"You":"Assistant"}</div><div class="bubble">${md(text)}</div>`;
+      chat.appendChild(el); chat.scrollTop=chat.scrollHeight;
+    }
+
+    async function doSend(){
+      const text=(inp.value||"").trim(); if(!text) return;
+      inp.value=""; addMsg("user", text); history.push({role:"user", content:text});
+      try{
+        const res=await fetch("/api/llm-chat",{
+          method:"POST", headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({messages:history})
+        });
+        const data=await res.json(); const reply=data.reply||"(no reply)";
+        addMsg("assistant", reply); history.push({role:"assistant", content:reply});
+      }catch(e){
+        addMsg("assistant", "**Error:** cannot reach the server.");
+      }
+    }
+
+    send.addEventListener("click", doSend);
+    inp.addEventListener("keydown", e => { if (e.key==="Enter" && !e.shiftKey){ e.preventDefault(); doSend(); }});
+
+    document.querySelectorAll(".tips [data-q]").forEach(b=>{
+      b.addEventListener("click", ()=>{ inp.value=b.dataset.q; doSend(); });
+    });
+
+    // Optional: allow inner chat to request close (parent page listens)
+    // parent.postMessage({ type:"close-chatbot" }, "*")
+  </script>
+</body>
+</html>

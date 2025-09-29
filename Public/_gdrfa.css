@@ -1,0 +1,109 @@
+:root{
+  /* Palette tuned to your screenshot: deep charcoal + burgundy + gold + green */
+  --bg: #0b0c10;                 /* page background (when standalone) */
+  --overlay: #121316;            /* dark overlay for depth */
+  --card: rgba(18,19,22,.78);    /* glassy card */
+  --border: rgba(255,255,255,.06);
+  --text: #e8eaee;               /* near-white */
+  --muted: #a6a9b3;              /* cool gray */
+  --gold: #d6b779;               /* numeric highlights */
+  --accent: #8b1f24;             /* burgundy */
+  --accent2:#b63a3a;             /* lighter burgundy */
+  --ok:#29c36a;                  /* green ticks */
+  --danger:#ef5350;              /* error */
+  --shadow: 0 12px 40px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, Ubuntu, Arial, sans-serif;
+  background:
+    radial-gradient(1200px 700px at 20% -10%, #171317 0, var(--bg) 60%),
+    linear-gradient(180deg, rgba(0,0,0,.25), rgba(0,0,0,.6));
+  color:var(--text);
+}
+.container{max-width:1140px;margin:34px auto;padding:0 16px}
+.card{
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.02)),
+    var(--card);
+  border:1px solid var(--border);
+  border-radius:18px;
+  box-shadow:var(--shadow);
+  padding:18px;
+  backdrop-filter:saturate(120%) blur(6px);
+}
+
+h1{margin:0 0 8px;font-size:24px;letter-spacing:.2px}
+p.lead{margin:4px 0 16px;color:var(--muted)}
+.headerbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+select,input[type="file"],input[type="date"],input[type="text"],input[type="number"]{
+  width:100%;padding:10px 12px;border-radius:12px;
+  background:#0f0f12;color:var(--text);border:1px solid var(--border)
+}
+button{border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
+.btn-primary{background:linear-gradient(180deg,var(--accent2),var(--accent));color:#fff}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn-danger{background:var(--danger);color:#fff}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--border);color:var(--muted)}
+
+.list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.item{background:#0e0f14;border:1px solid var(--border);border-radius:14px;padding:12px}
+
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.kpi{background:#0e0f14;border:1px solid var(--border);border-radius:14px;padding:14px}
+.kpi .label{color:var(--muted);font-size:12px}
+.kpi .value{font-size:26px;font-weight:900;color:var(--gold);letter-spacing:.5px}
+
+.progress{
+  height:6px;border-radius:8px;background:rgba(255,255,255,.06);overflow:hidden
+}
+.progress>span{
+  display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2))
+}
+
+.iconbtn{background:transparent;border:1px solid var(--border);color:var(--text);border-radius:10px;padding:6px 10px;cursor:pointer}
+.iconbtn:hover{background:#15161c}
+
+/* Chat */
+.chatwrap{display:grid;gap:12px}
+.chatwrap.horizontal{grid-template-columns:1fr 300px}
+.chatwrap.vertical{grid-template-rows:1fr auto}
+.chatbox{
+  background:#0e0f14;border:1px solid var(--border);border-radius:14px;padding:10px;height:60vh;overflow:auto
+}
+.msg{margin:8px 0}
+.msg .from{font-size:12px;color:var(--muted);margin-bottom:3px}
+.msg .bubble{display:inline-block;background:#12131a;border:1px solid #262836;border-radius:12px;padding:10px 12px}
+.msg.user .bubble{background:#1a2a3a;border-color:#2a3f5a}
+.inputbar{display:grid;grid-template-columns:1fr auto;gap:8px}
+.suggestions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.suggestions button{font-weight:600}
+
+/* —— TILE / EMBED MODES —— */
+/* Compact when embedded into dashboards */
+.tile body, body.tile{background:transparent}
+.tile .container, body.tile .container{max-width:none;margin:0;padding:8px}
+.tile .card{border-radius:12px;box-shadow:none;padding:12px}
+.compact h1{font-size:16px;margin-bottom:2px}
+.compact .lead{font-size:12px;margin-bottom:8px}
+.compact .chatbox{height:38vh}
+
+/* Corner anchoring (optional via query params) */
+.corner{position:fixed;z-index:9999;inset:auto 18px 18px auto}
+.corner.tl{inset:18px auto auto 18px}
+.corner.tr{inset:18px 18px auto auto}
+.corner.bl{inset:auto auto 18px 18px}
+.corner.br{inset:auto 18px 18px auto}
+.corner .card{margin:0}
+
+/* Utility */
+.maximized{position:fixed;inset:0;width:100vw;height:100vh;z-index:9999;margin:0!important;border-radius:0!important}
+.minimized{height:48px;overflow:hidden}
+a{color:#d6b779}

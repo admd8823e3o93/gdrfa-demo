@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Incident Intake</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="stylesheet" href="/_gdrfa.css">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="headerbar">
+        <div>
+          <h1>📷 Incident Intake</h1>
+          <p class="lead">Choose a scenario and attach a photo. “Clear” resets data <em>and</em> alerts for that scenario.</p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="scenario">Scenario</label>
+          <select id="scenario"></select>
+        </div>
+        <div>
+          <label for="photo">Upload / Take Photo</label>
+          <input id="photo" type="file" accept="image/*" capture="environment">
+        </div>
+      </div>
+
+      <div id="previewBox" style="display:none;margin-top:10px">
+        <img id="previewImg" style="max-width:100%;border-radius:12px;border:1px solid var(--border)">
+      </div>
+
+      <div class="controls" style="margin-top:12px">
+        <button class="btn-primary" id="submitBtn">Submit</button>
+        <button class="btn-ghost" id="clearBtn">Clear</button>
+        <span class="badge" id="status">idle</span>
+      </div>
+
+      <div class="item" id="resultBox" style="display:none;margin-top:12px"></div>
+
+      <p class="lead" style="margin-top:14px">
+        Review in <a href="/alerts.html" target="_blank">Alerts</a> or ask the <a href="/chatbot.html" target="_blank">Chatbot</a>.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const scenarioEl=document.getElementById("scenario");
+    const photoEl=document.getElementById("photo");
+    const submitBtn=document.getElementById("submitBtn");
+    const clearBtn=document.getElementById("clearBtn");
+    const statusBadge=document.getElementById("status");
+    const previewBox=document.getElementById("previewBox");
+    const previewImg=document.getElementById("previewImg");
+    const resultBox=document.getElementById("resultBox");
+    function setStatus(t){statusBadge.textContent=t}
+    function showResult(h){resultBox.innerHTML=h;resultBox.style.display="block"}
+    function hideResult(){resultBox.style.display="none";resultBox.innerHTML=""}
+    function validateFile(f){
+      if(!f) return "Please select a photo.";
+      if(f.size>15*1024*1024) return "File too large. Max 15 MB.";
+      if(!f.type.startsWith("image/")) return "Only images are allowed.";
+      return null;
+    }
+    async function loadScenarios(){
+      const res=await fetch(`/api/scenarios`);
+      const data=await res.json();
+      scenarioEl.innerHTML=data.scenarios.map(s=>`<option value="${s.value}">${s.label}</option>`).join("");
+    }
+    photoEl.addEventListener("change",()=>{
+      const f=photoEl.files?.[0]; if(!f){previewBox.style.display="none";return;}
+      const err=validateFile(f); if(err){alert(err); photoEl.value=""; previewBox.style.display="none"; return;}
+      const r=new FileReader(); r.onload=e=>{previewImg.src=e.target.result; previewBox.style.display="block"}; r.readAsDataURL(f);
+    });
+    submitBtn.addEventListener("click",async()=>{
+      hideResult();
+      const f=photoEl.files?.[0]; const err=validateFile(f); if(err){alert(err); return;}
+      submitBtn.disabled=true; clearBtn.disabled=true; setStatus("submitting…");
+      try{
+        const fd=new FormData(); fd.append("scenario",scenarioEl.value); fd.append("photo",f);
+        const res=await fetch(`/api/submit`,{method:"POST",body:fd}); const data=await res.json();
+        if(!data.ok) throw new Error(data.error||"Submit failed");
+        setStatus("submitted ✔");
+        showResult(`<div><strong>Chatbot alert:</strong> ${data.chatbotMessage||"Received."}</div>${data.filePath?`<div style="margin-top:6px">Stored image: <a href="${data.filePath}" target="_blank">open</a></div>`:""}`);
+        photoEl.value=""; previewBox.style.display="none"; previewImg.src="";
+      }catch(e){setStatus("error"); alert(e.message||e)}finally{submitBtn.disabled=false; clearBtn.disabled=false}
+    });
+    clearBtn.addEventListener("click",async()=>{
+      hideResult(); if(!confirm("Reset data and alerts for this scenario?")) return;
+      submitBtn.disabled=true; clearBtn.disabled=true; setStatus("clearing…");
+      try{
+        const res=await fetch(`/api/clear`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({scenario:scenarioEl.value,clearNotifications:true})});
+        const data=await res.json(); if(!data.ok) throw new Error(data.error||"Clear failed");
+        setStatus("cleared ✔"); showResult(`<div>${data.chatbotMessage||"Cleared."}</div>`);
+      }catch(e){setStatus("error"); alert(e.message||e)}finally{submitBtn.disabled=false; clearBtn.disabled=false}
+    });
+    loadScenarios().then(()=>setStatus("ready"));
+  </script>
+</body>
+</html>

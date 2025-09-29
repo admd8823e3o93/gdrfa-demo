@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Alerts</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="stylesheet" href="/_gdrfa.css">
+  <style>
+    /* Fill parent; feed can scroll */
+    html, body { height: 100%; background: transparent; }
+    .wrap { height: 100%; padding: 8px; }
+    .card { height: 100%; padding: 10px; border-radius: 12px; box-shadow: none; display:flex; flex-direction:column; gap:8px }
+
+    /* ── KPI BAR: 3 pills always on one row ───────────────────────── */
+    .kpi-bar{
+      display:flex; gap:6px; align-items:stretch; /* force single row */
+      white-space:nowrap;
+    }
+    .kpi-box{
+      flex:1 1 0; min-width:0;
+      background:#0e0f14; border:1px solid var(--border); border-radius:10px;
+      padding:6px 8px; /* smaller padding */
+    }
+    .kpi-title{ font-size:10px; color:var(--muted); margin-bottom:2px; line-height:1.1 }
+    .kpi-val{ font-size:20px; font-weight:900; color:var(--gold); letter-spacing:.2px } /* smaller number */
+
+    /* If container is extremely narrow, shrink fonts a bit more */
+    @media (max-width: 420px){
+      .kpi-title{ font-size:9px }
+      .kpi-val{ font-size:18px }
+    }
+
+    /* ── Feed ─────────────────────────────────────────────────────── */
+    .feed{ flex:1 1 auto; overflow:auto }
+    .item{ background:#0e0f14; border:1px solid var(--border); border-radius:10px; padding:10px; margin-bottom:8px }
+    .meta{ font-size:11px; color:var(--muted) }
+    .msg { margin-top:4px; font-size:13px }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <!-- KPIs (Total per scenario ONLY; smaller, always in one row) -->
+      <div class="kpi-bar" id="kpiBar">Loading…</div>
+
+      <!-- Alerts feed (scrollable) -->
+      <div class="feed" id="feed"></div>
+    </div>
+  </div>
+
+  <script>
+    // Optional: /alerts.html?scenario=tempered-id to pre-filter feed
+    const scenarioParam = new URLSearchParams(location.search).get("scenario");
+
+    const kpiBar = document.getElementById("kpiBar");
+    const feedEl = document.getElementById("feed");
+    let SCENARIOS = [];
+
+    function fmt(n){
+      if (n == null) return "0";
+      if (n >= 1_000_000) return (n/1_000_000).toFixed(1).replace(/\.0$/,"")+"M";
+      if (n >= 1_000)     return (n/1_000).toFixed(1).replace(/\.0$/,"")+"K";
+      return Number(n).toLocaleString();
+    }
+
+    async function loadScenarios(){
+      const r = await fetch("/api/scenarios");
+      const j = await r.json();
+      SCENARIOS = j.scenarios || [];
+    }
+
+    async function fetchKpi(scenario){
+      const r = await fetch(`/api/kpis?scenario=${encodeURIComponent(scenario)}`);
+      const j = await r.json();
+      return { totalReports: j?.kpis?.totalReports ?? 0 };
+    }
+
+    async function renderKPIs(){
+      const results = await Promise.all(SCENARIOS.map(s => fetchKpi(s.value)));
+      kpiBar.innerHTML = SCENARIOS.map((s, i) => {
+        const total = results[i].totalReports;
+        return `
+          <div class="kpi-box">
+            <div class="kpi-title">${s.label}</div>
+            <div class="kpi-val">${fmt(total)}</div>
+          </div>`;
+      }).join("");
+    }
+
+    async function renderFeed(){
+      const q = new URLSearchParams();
+      if (scenarioParam) q.set("scenario", scenarioParam);
+      q.set("limit", "200"); // show plenty; scroll handles overflow
+      const r = await fetch(`/api/notifications?` + q.toString());
+      const j = await r.json();
+      feedEl.innerHTML = (j.items || []).map(n => `
+        <div class="item">
+          <div class="meta">${new Date(n.created_at).toLocaleString()} • ${n.scenario}</div>
+          <div class="msg">${n.message}</div>
+        </div>
+      `).join("") || `<div class="item"><div class="meta">No alerts</div></div>`;
+    }
+
+    let timer=null;
+    function startAuto(){ stopAuto(); timer=setInterval(async()=>{ await renderKPIs(); await renderFeed(); }, 5000); }
+    function stopAuto(){ if (timer) clearInterval(timer); timer=null; }
+
+    (async () => {
+      await loadScenarios();
+      await renderKPIs();
+      await renderFeed();
+      startAuto();
+    })();
+  </script>
+</body>
+</html>
